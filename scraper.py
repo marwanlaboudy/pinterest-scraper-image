@@ -56,34 +56,60 @@ def run():
 
         page = context.new_page()
 
+        print("Opening Pinterest...")
         page.goto("https://www.pinterest.com/")
         page.wait_for_timeout(4000)
+        print("Current URL:", page.url)
+        page.screenshot(path="step1_home.png")
 
-        # Click search bar
+        print("Clicking search bar...")
         page.wait_for_selector("input[placeholder='Search']", timeout=20000)
         page.click("input[placeholder='Search']")
         page.wait_for_timeout(2000)
+        page.screenshot(path="step2_search_clicked.png")
 
-        # Click Lens button
+        print("Clicking Lens button...")
         page.wait_for_selector("button[aria-label='Lens']", timeout=10000)
         page.click("button[aria-label='Lens']")
         page.wait_for_timeout(3000)
+        print("Current URL after lens click:", page.url)
+        page.screenshot(path="step3_lens_clicked.png")
 
-        # Upload image — use input[type='file'] which is universal
-        page.wait_for_selector("input[type='file']", timeout=10000)
+        print("Looking for file input...")
+        file_inputs = page.locator("input[type='file']").all()
+        print(f"File inputs found: {len(file_inputs)}")
+        for i, f in enumerate(file_inputs):
+            print(f"  File input {i}: visible={f.is_visible()}")
+
+        print("Uploading image...")
         page.locator("input[type='file']").first.set_input_files(IMAGE_PATH)
-        print("Image uploaded")
+        page.wait_for_timeout(3000)
+        print("Current URL after upload:", page.url)
+        page.screenshot(path="step4_after_upload.png")
 
-        # Wait for results
+        print("Waiting for results to load...")
         page.wait_for_timeout(8000)
+        print("Current URL after wait:", page.url)
+        page.screenshot(path="step5_results.png")
 
-        # Scroll to load more
-        for _ in range(5):
+        print("Scrolling...")
+        for i in range(5):
             page.mouse.wheel(0, 3000)
             page.wait_for_timeout(2000)
+            print(f"  Scroll {i+1} done")
+
+        page.screenshot(path="step6_after_scroll.png")
 
         images = page.locator("img").all()
-        print("Total images found:", len(images))
+        print(f"Total images found: {len(images)}")
+
+        print("All image srcs:")
+        for i, img in enumerate(images[:20]):
+            try:
+                src = img.get_attribute("src") or ""
+                print(f"  [{i}] {src}")
+            except:
+                pass
 
         os.makedirs("images", exist_ok=True)
         count = 0
