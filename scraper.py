@@ -42,7 +42,7 @@ def run():
 
         context = browser.new_context(
             storage_state="pinterest_session.json",
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         )
 
         page = context.new_page()
@@ -68,7 +68,7 @@ def run():
         print("Waiting for results...")
         page.wait_for_timeout(8000)
 
-        # scroll to load results
+        # Scroll
         for _ in range(3):
             page.mouse.wheel(0, 2000)
             page.wait_for_timeout(2000)
@@ -90,15 +90,12 @@ def run():
                 if not src:
                     continue
 
-                # only take Pinterest images
                 if "pinimg.com" not in src:
                     continue
 
-                # only medium size (real pins)
                 if "/236x/" not in src:
                     continue
 
-                # convert to higher resolution
                 high_res = src.replace("/236x/", "/736x/")
 
                 print("Trying:", high_res)
@@ -106,7 +103,7 @@ def run():
                 r = requests.get(high_res, timeout=10)
 
                 if r.status_code == 200 and len(r.content) > 20000:
-                    path = f"images/result_{saved}.jpg"
+                    path = f"images/img_{saved}.jpg"
 
                     with open(path, "wb") as f:
                         f.write(r.content)
