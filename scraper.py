@@ -1,6 +1,8 @@
 import os
 import sys
 import requests
+import subprocess
+from PIL import Image, ImageDraw, ImageFont
 from playwright.sync_api import sync_playwright
 
 DEFAULT_IMAGE_PATH = "query.png"
@@ -19,6 +21,53 @@ def download_image(url, path=DEFAULT_IMAGE_PATH):
         return path
     else:
         raise Exception(f"Failed to download image: {r.status_code}")
+
+
+# 🔥 NEW: create SHOP button
+def create_button():
+    W, H = 500, 110
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    draw.rounded_rectangle([0, 0, W-1, H-1], radius=55, fill=(255,255,255,245))
+    draw.rounded_rectangle([0, 0, W-1, H-1], radius=55, outline=(20,20,20,255), width=4)
+
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeSansBold.ttf", 48)
+    except:
+        font = ImageFont.load_default()
+
+    text = "SHOP NOW"
+    bbox = draw.textbbox((0, 0), text, font=font)
+
+    x = (W - (bbox[2]-bbox[0])) // 2 - bbox[0]
+    y = (H - (bbox[3]-bbox[1])) // 2 - bbox[1]
+
+    draw.text((x+2, y+2), text, fill=(100,100,100,180), font=font)
+    draw.text((x, y), text, fill=(20,20,20,255), font=font)
+
+    img.save("shop_now_btn.png")
+
+
+# 🔥 NEW: convert image → video
+def convert_to_video(image_path):
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-loop", "1",
+        "-i", image_path,
+        "-i", "shop_now_btn.png",
+        "-vf",
+        "scale=720:1280:force_original_aspect_ratio=decrease,"
+        "pad=720:1280:(ow-iw)/2:(oh-ih)/2,"
+        "overlay=(W-w)/2:H-160",
+        "-t", "5",
+        "-r", "25",
+        "-pix_fmt", "yuv420p",
+        "output.mp4"
+    ]
+
+    subprocess.run(cmd, check=True)
 
 
 def run():
@@ -68,7 +117,6 @@ def run():
         print("Waiting for results...")
         page.wait_for_timeout(8000)
 
-        # Scroll
         for _ in range(3):
             page.mouse.wheel(0, 2000)
             page.wait_for_timeout(2000)
@@ -120,6 +168,18 @@ def run():
         print("Done. Downloaded", saved, "image(s)")
 
         browser.close()
+
+    # 🔥 NEW PART: VIDEO CREATION
+    if saved > 0:
+        print("Creating SHOP button...")
+        create_button()
+
+        print("Converting to video...")
+        convert_to_video("images/img_0.jpg")
+
+        print("Saved as output.mp4")
+    else:
+        print("No image found, skipping video creation")
 
 
 if __name__ == "__main__":
