@@ -35,10 +35,22 @@ jobs:
           git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           mkdir -p pinterest_images
-          cp images/* pinterest_images/ 2>/dev/null || echo "No images to copy"
+          rm -f pinterest_images/*
+          cp images/img_0.jpg pinterest_images/latest.jpg 2>/dev/null || \
+          cp images/img_0.png pinterest_images/latest.png 2>/dev/null || \
+          echo "No image to copy"
           git add pinterest_images/
-          git commit -m "Update pinterest images" || echo "No changes"
+          git commit -m "Update pinterest image" || echo "No changes"
           git push
+
+      - name: Save debug files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: |
+            query.png
+            images/
 
       - name: Debug
         if: always()
