@@ -1,14 +1,13 @@
 name: Pinterest Image Scraper
-
 on:
-  workflow_dispatch:   # 🔥 allows manual run from GitHub UI
+  workflow_dispatch:
   repository_dispatch:
-    types: [run-scraper]
-
+    types: [run-image-scraper]
+permissions:
+  contents: write
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -22,15 +21,27 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg python3 python3-pip xvfb fonts-dejavu-core fonts-freefont-ttf
-          pip install -r requirements.txt
-          playwright install --with-deps
+          sudo apt-get install -y python3 python3-pip xvfb
+          pip install playwright requests Pillow
+          playwright install --with-deps chromium
 
       - name: Run scraper
         run: |
-          xvfb-run -a python scraper.py
+          xvfb-run -a python scraping_aliexpress.py "${{ github.event.client_payload.image_url }}"
 
-      - name: Debug (always run)
+      - name: Save images to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          mkdir -p pinterest_images
+          cp images/* pinterest_images/ 2>/dev/null || echo "No images to copy"
+          git add pinterest_images/
+          git commit -m "Update pinterest images" || echo "No changes"
+          git push
+
+      - name: Debug
         if: always()
         run: |
           echo "Workflow finished"
+          ls -la pinterest_images/ || echo "No images folder found"
