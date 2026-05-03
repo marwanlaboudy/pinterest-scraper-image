@@ -27,7 +27,7 @@ jobs:
 
       - name: Run scraper
         run: |
-          xvfb-run -a python scraping_aliexpress.py "${{ github.event.client_payload.image_url }}"
+          xvfb-run -a python scraper.py "${{ github.event.client_payload.image_url }}"
 
       - name: Save images to repo
         run: |
