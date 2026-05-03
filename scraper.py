@@ -85,6 +85,10 @@ def run():
         print("Waiting for results to load...")
         page.wait_for_timeout(8000)
         print("Current URL after wait:", page.url)
+
+        # Close search dropdown
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(2000)
         page.screenshot(path="step5_results.png")
 
         print("Scrolling...")
@@ -93,6 +97,8 @@ def run():
             page.wait_for_timeout(3000)
             print(f"  Scroll {i+1} done")
 
+        page.mouse.click(400, 300)
+        page.wait_for_timeout(1000)
         page.screenshot(path="step6_after_scroll.png")
 
         # Extract image URLs directly from page HTML
@@ -101,7 +107,7 @@ def run():
 
         pattern = r'(https://i\.pinimg\.com/[^"\'\\]+\.jpg)'
         found_urls = re.findall(pattern, content)
-        found_urls = list(dict.fromkeys(found_urls))  # dedupe
+        found_urls = list(dict.fromkeys(found_urls))
         print(f"Found {len(found_urls)} image URLs in HTML")
         for u in found_urls[:10]:
             print(f"  {u}")
@@ -111,11 +117,9 @@ def run():
 
         for url in found_urls:
             try:
-                # Skip low res
                 if "/200x/" in url or "/75x/" in url:
                     continue
 
-                # Upgrade to highest res
                 high_res = (
                     url.replace("/236x/", "/736x/")
                        .replace("/474x/", "/736x/")
