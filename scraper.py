@@ -89,7 +89,7 @@ def run():
         page.wait_for_timeout(8000)
         print("Current URL after wait:", page.url)
 
-        # Close search dropdown so lens results are visible
+        # Close search dropdown
         page.keyboard.press("Escape")
         page.wait_for_timeout(2000)
         page.screenshot(path="step5_results.png")
@@ -100,6 +100,9 @@ def run():
             page.wait_for_timeout(2000)
             print(f"  Scroll {i+1} done")
 
+        # Click main content to dismiss any tooltip
+        page.mouse.click(400, 300)
+        page.wait_for_timeout(1000)
         page.screenshot(path="step6_after_scroll.png")
 
         images = page.locator("img").all()
@@ -128,12 +131,19 @@ def run():
                     continue
                 if any(x in src for x in ["avatar", "logo", "icon"]):
                     continue
-
-                # Skip low res thumbnails
                 if "/200x/" in src:
                     continue
 
-                # Upgrade to highest res
+                # Skip small dimension images
+                try:
+                    width = int(img.get_attribute("width") or 0)
+                    height = int(img.get_attribute("height") or 0)
+                    if width > 0 and height > 0 and (width < 100 or height < 100):
+                        print(f"Skipping small dimensions {width}x{height}: {src}")
+                        continue
+                except:
+                    pass
+
                 high_res = (
                     src.replace("/236x/", "/736x/")
                        .replace("/474x/", "/736x/")
@@ -146,7 +156,12 @@ def run():
                 r = requests.get(high_res, timeout=10, headers={
                     "User-Agent": "Mozilla/5.0"
                 })
-                print(f"Status: {r.status_code}")
+                print(f"Status: {r.status_code} Size: {len(r.content)} bytes")
+
+                # Skip tiny files — real images are at least 20KB
+                if len(r.content) < 20000:
+                    print("Skipping — file too small")
+                    continue
 
                 if r.status_code == 200:
                     ext = "jpg" if "jpg" in high_res else "png"
