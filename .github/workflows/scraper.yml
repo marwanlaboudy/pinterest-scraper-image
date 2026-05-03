@@ -50,6 +50,12 @@ jobs:
           name: debug
           path: |
             query.png
+            step1_home.png
+            step2_search_clicked.png
+            step3_lens_clicked.png
+            step4_after_upload.png
+            step5_results.png
+            step6_after_scroll.png
             images/
 
       - name: Debug
