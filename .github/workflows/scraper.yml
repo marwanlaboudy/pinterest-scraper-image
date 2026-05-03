@@ -1,13 +1,17 @@
 name: Pinterest Image Scraper
+
 on:
   workflow_dispatch:
   repository_dispatch:
     types: [run-image-scraper]
+
 permissions:
   contents: write
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -29,19 +33,34 @@ jobs:
         run: |
           xvfb-run -a python scraper.py "${{ github.event.client_payload.image_url }}"
 
+      # ✅ FIXED PART STARTS HERE
       - name: Save images to repo
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
           mkdir -p pinterest_images
-          rm -f pinterest_images/*
-          cp images/img_0.jpg pinterest_images/latest.jpg 2>/dev/null || \
-          cp images/img_0.png pinterest_images/latest.png 2>/dev/null || \
-          echo "No image to copy"
-          git add pinterest_images/
-          git commit -m "Update pinterest image" || echo "No changes"
-          git push
+
+          # Check if scraper produced images
+          FILE=$(ls images 2>/dev/null | head -n 1)
+
+          if [ -n "$FILE" ]; then
+            echo "Found image: $FILE"
+
+            # Only delete old file if new one exists
+            rm -f pinterest_images/*
+
+            cp "images/$FILE" pinterest_images/latest.jpg
+            echo "Copied to pinterest_images/latest.jpg"
+
+            git add pinterest_images/
+            git commit -m "Update pinterest image" || echo "No changes"
+            git push
+          else
+            echo "No image found in images/ — skipping commit"
+          fi
+      # ✅ FIXED PART ENDS HERE
 
       - name: Save debug files
         if: always()
@@ -62,4 +81,5 @@ jobs:
         if: always()
         run: |
           echo "Workflow finished"
-          ls -la pinterest_images/ || echo "No images folder found"
+          ls -la images/ || echo "No images folder"
+          ls -la pinterest_images/ || echo "No pinterest_images folder"
