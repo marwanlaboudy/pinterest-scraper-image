@@ -78,8 +78,6 @@ def run():
         print("Looking for file input...")
         file_inputs = page.locator("input[type='file']").all()
         print(f"File inputs found: {len(file_inputs)}")
-        for i, f in enumerate(file_inputs):
-            print(f"  File input {i}: visible={f.is_visible()}")
 
         print("Uploading image...")
         page.locator("input[type='file']").first.set_input_files(IMAGE_PATH)
@@ -90,6 +88,10 @@ def run():
         print("Waiting for results to load...")
         page.wait_for_timeout(8000)
         print("Current URL after wait:", page.url)
+
+        # Close search dropdown so lens results are visible
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(2000)
         page.screenshot(path="step5_results.png")
 
         print("Scrolling...")
@@ -120,23 +122,31 @@ def run():
                 src = img.get_attribute("src") or ""
                 if not src:
                     continue
-                if any(x in src for x in ["75x75", "30x30", "14x14", "avatar", "logo", "icon"]):
+                if "pinimg.com" not in src:
                     continue
                 if src in saved_urls:
                     continue
-                if "pinimg.com" not in src:
+                if any(x in src for x in ["avatar", "logo", "icon"]):
                     continue
 
+                # Skip low res thumbnails
+                if "/200x/" in src:
+                    continue
+
+                # Upgrade to highest res
                 high_res = (
                     src.replace("/236x/", "/736x/")
                        .replace("/474x/", "/736x/")
                        .replace("/564x/", "/736x/")
                 )
+
                 saved_urls.add(src)
 
+                print(f"Trying: {high_res}")
                 r = requests.get(high_res, timeout=10, headers={
                     "User-Agent": "Mozilla/5.0"
                 })
+                print(f"Status: {r.status_code}")
 
                 if r.status_code == 200:
                     ext = "jpg" if "jpg" in high_res else "png"
