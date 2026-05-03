@@ -4,7 +4,7 @@ import requests
 from playwright.sync_api import sync_playwright
 
 DEFAULT_IMAGE_PATH = "query.png"
-MAX_IMAGES = 20
+MAX_IMAGES = 1
 
 def download_image(url, path=DEFAULT_IMAGE_PATH):
     headers = {
