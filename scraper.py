@@ -23,7 +23,7 @@ def download_image(url, path=DEFAULT_IMAGE_PATH):
         raise Exception(f"Failed to download image: {r.status_code}")
 
 
-# 🔥 NEW: create SHOP button
+# 🔥 Create SHOP button
 def create_button():
     W, H = 500, 110
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -49,7 +49,7 @@ def create_button():
     img.save("shop_now_btn.png")
 
 
-# 🔥 NEW: convert image → video
+# 🔥 FIXED video conversion
 def convert_to_video(image_path):
     cmd = [
         "ffmpeg",
@@ -57,13 +57,15 @@ def convert_to_video(image_path):
         "-loop", "1",
         "-i", image_path,
         "-i", "shop_now_btn.png",
-        "-vf",
-        "scale=720:1280:force_original_aspect_ratio=decrease,"
-        "pad=720:1280:(ow-iw)/2:(oh-ih)/2,"
-        "overlay=(W-w)/2:H-160",
+        "-filter_complex",
+        "[0:v]scale=720:1280:force_original_aspect_ratio=decrease,"
+        "pad=720:1280:(ow-iw)/2:(oh-ih)/2[bg];"
+        "[bg][1:v]overlay=(W-w)/2:H-160",
         "-t", "5",
         "-r", "25",
         "-pix_fmt", "yuv420p",
+        "-crf", "18",
+        "-preset", "fast",
         "output.mp4"
     ]
 
@@ -91,7 +93,7 @@ def run():
 
         context = browser.new_context(
             storage_state="pinterest_session.json",
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            user_agent="Mozilla/5.0"
         )
 
         page = context.new_page()
@@ -169,7 +171,7 @@ def run():
 
         browser.close()
 
-    # 🔥 NEW PART: VIDEO CREATION
+    # 🔥 VIDEO PART
     if saved > 0:
         print("Creating SHOP button...")
         create_button()
@@ -179,7 +181,7 @@ def run():
 
         print("Saved as output.mp4")
     else:
-        print("No image found, skipping video creation")
+        print("No image found, skipping video")
 
 
 if __name__ == "__main__":
