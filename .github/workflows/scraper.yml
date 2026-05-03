@@ -1,6 +1,7 @@
 name: Pinterest Image Scraper
 
 on:
+  workflow_dispatch:   # 🔥 allows manual run from GitHub UI
   repository_dispatch:
     types: [run-scraper]
 
@@ -15,6 +16,8 @@ jobs:
       - name: Load Pinterest session
         run: |
           echo "${{ secrets.PINTEREST_SESSION }}" | base64 -d > pinterest_session.json
+          echo "Session file size:"
+          wc -c pinterest_session.json
 
       - name: Install dependencies
         run: |
@@ -25,4 +28,9 @@ jobs:
 
       - name: Run scraper
         run: |
-          xvfb-run python scraper.py
+          xvfb-run -a python scraper.py
+
+      - name: Debug (always run)
+        if: always()
+        run: |
+          echo "Workflow finished"
