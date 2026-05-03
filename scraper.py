@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import requests
 from playwright.sync_api import sync_playwright
 
@@ -75,10 +76,6 @@ def run():
         print("Current URL after lens click:", page.url)
         page.screenshot(path="step3_lens_clicked.png")
 
-        print("Looking for file input...")
-        file_inputs = page.locator("input[type='file']").all()
-        print(f"File inputs found: {len(file_inputs)}")
-
         print("Uploading image...")
         page.locator("input[type='file']").first.set_input_files(IMAGE_PATH)
         page.wait_for_timeout(3000)
@@ -88,69 +85,42 @@ def run():
         print("Waiting for results to load...")
         page.wait_for_timeout(8000)
         print("Current URL after wait:", page.url)
-
-        # Close search dropdown
-        page.keyboard.press("Escape")
-        page.wait_for_timeout(2000)
         page.screenshot(path="step5_results.png")
 
         print("Scrolling...")
-        for i in range(5):
-            page.mouse.wheel(0, 3000)
-            page.wait_for_timeout(2000)
+        for i in range(3):
+            page.mouse.wheel(0, 2000)
+            page.wait_for_timeout(3000)
             print(f"  Scroll {i+1} done")
 
-        # Click main content to dismiss any tooltip
-        page.mouse.click(400, 300)
-        page.wait_for_timeout(1000)
         page.screenshot(path="step6_after_scroll.png")
 
-        images = page.locator("img").all()
-        print(f"Total images found: {len(images)}")
+        # Extract image URLs directly from page HTML
+        print("Extracting images from HTML...")
+        content = page.content()
 
-        print("All image srcs:")
-        for i, img in enumerate(images[:20]):
-            try:
-                src = img.get_attribute("src") or ""
-                print(f"  [{i}] {src}")
-            except:
-                pass
+        pattern = r'(https://i\.pinimg\.com/[^"\'\\]+\.jpg)'
+        found_urls = re.findall(pattern, content)
+        found_urls = list(dict.fromkeys(found_urls))  # dedupe
+        print(f"Found {len(found_urls)} image URLs in HTML")
+        for u in found_urls[:10]:
+            print(f"  {u}")
 
         os.makedirs("images", exist_ok=True)
         count = 0
-        saved_urls = set()
 
-        for img in images:
+        for url in found_urls:
             try:
-                src = img.get_attribute("src") or ""
-                if not src:
-                    continue
-                if "pinimg.com" not in src:
-                    continue
-                if src in saved_urls:
-                    continue
-                if any(x in src for x in ["avatar", "logo", "icon"]):
-                    continue
-                if "/200x/" in src:
+                # Skip low res
+                if "/200x/" in url or "/75x/" in url:
                     continue
 
-                # Skip small dimension images
-                try:
-                    width = int(img.get_attribute("width") or 0)
-                    height = int(img.get_attribute("height") or 0)
-                    if width > 0 and height > 0 and (width < 100 or height < 100):
-                        print(f"Skipping small dimensions {width}x{height}: {src}")
-                        continue
-                except:
-                    pass
-
+                # Upgrade to highest res
                 high_res = (
-                    src.replace("/236x/", "/736x/")
+                    url.replace("/236x/", "/736x/")
                        .replace("/474x/", "/736x/")
                        .replace("/564x/", "/736x/")
                 )
-
-                saved_urls.add(src)
 
                 print(f"Trying: {high_res}")
                 r = requests.get(high_res, timeout=10, headers={
@@ -158,18 +128,17 @@ def run():
                 })
                 print(f"Status: {r.status_code} Size: {len(r.content)} bytes")
 
-                # Skip tiny files — real images are at least 20KB
+                if r.status_code != 200:
+                    continue
                 if len(r.content) < 20000:
                     print("Skipping — file too small")
                     continue
 
-                if r.status_code == 200:
-                    ext = "jpg" if "jpg" in high_res else "png"
-                    filepath = f"images/img_{count}.{ext}"
-                    with open(filepath, "wb") as f:
-                        f.write(r.content)
-                    print("Saved:", high_res)
-                    count += 1
+                filepath = f"images/img_{count}.jpg"
+                with open(filepath, "wb") as f:
+                    f.write(r.content)
+                print("Saved:", high_res)
+                count += 1
 
                 if count >= MAX_IMAGES:
                     break
